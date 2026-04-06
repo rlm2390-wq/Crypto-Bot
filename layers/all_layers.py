@@ -226,7 +226,6 @@ def _route_claimed_rewards(symbol: str, amount: float, routing: str, wallet):
         activity(f"[YIELD] Routing {amount:.6f} {symbol} reward value → {target} on {PRIMARY_EXCHANGE}")
         buy_amount = (value_usd * 0.98) / exchange.get_price(target)
         exchange.buy(target, buy_amount, f"yield route: {symbol} rewards → {target}")
-        from layers.vault import lock_gains_into_vault
         from config import SWING_REINVEST_PCT
         lock_gains_into_vault(target, buy_amount * SWING_REINVEST_PCT)
 
@@ -263,7 +262,6 @@ def _sell_exchange_rewards(symbol: str):
     buy_amount = (reward_usd * 0.98) / tgt_exch.get_price(target)
     tgt_exch.buy(target, buy_amount, f"yield route from {symbol}")
 
-    from layers.vault import lock_gains_into_vault
     from config import SWING_REINVEST_PCT
     lock_gains_into_vault(target, buy_amount * SWING_REINVEST_PCT)
 
@@ -297,7 +295,6 @@ def _maybe_phase_out_algo():
         tgt_exch   = get_exchange(PORTFOLIO.get(target, {}).get("source", PRIMARY_EXCHANGE))
         buy_amount = (total_usd * 0.98) / tgt_exch.get_price(target)
         tgt_exch.buy(target, buy_amount, f"ALGO phase-out → {target}")
-        from layers.vault import lock_gains_into_vault
         lock_gains_into_vault(target, buy_amount * SWING_REINVEST_PCT)
         PORTFOLIO["ALGO"]["balance"] = 0.0
 
