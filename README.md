@@ -1,84 +1,170 @@
-# RIZZ CRYPTO ENGINE — Deploy Guide
+# RIZZ CRYPTO ENGINE v3.0
 
-## Files
+## File Structure
 ```
-engine.py              ← main engine + Flask dashboard
-templates/
-  dashboard.html       ← control panel UI
-requirements.txt
-Procfile               ← Railway entry point
+rizz-crypto-engine/
+├── engine.py               ← entry point (Flask + engine loop)
+├── config.py               ← all settings, credentials, asset rules
+├── .env                    ← your local keys (NEVER commit this)
+├── .env.example            ← template — copy to .env and fill in
+├── .gitignore
+├── requirements.txt
+├── Procfile
+│
+├── exchanges/
+│   ├── __init__.py         ← exchange registry
+│   ├── base.py             ← shared interface
+│   ├── coinbase.py         ← Coinbase connector
+│   └── other_exchanges.py  ← Kraken, Binance, Uphold, Bitrue
+│
+├── wallets/
+│   ├── __init__.py         ← wallet registry
+│   ├── base.py             ← shared interface
+│   ├── ledger.py           ← Ledger (read-only, THE VAULT)
+│   ├── evm_wallet.py       ← MetaMask ETH/MATIC/ARB/OP + Bifrost SGB/FLR + XDC
+│   └── other_wallets.py    ← Phantom (SOL), Keplr (ATOM)
+│
+├── layers/
+│   ├── __init__.py
+│   └── all_layers.py       ← Vault, Swing, Yield, Side Bets logic
+│
+├── core/
+│   ├── __init__.py
+│   ├── logger.py           ← activity log
+│   ├── state.py            ← shared portfolio state
+│   ├── approvals.py        ← approval queue + Telegram bridge
+│   └── safety.py           ← safety gate checks
+│
+└── templates/
+    └── dashboard.html      ← full control panel
 ```
 
 ---
 
-## 1. GitHub
+## Phase 1 — Run Locally (Simulation)
 
-Push all files to a new repo (e.g. `rizz-crypto-engine`).
+```bash
+# 1. Clone repo
+git clone https://github.com/YOU/rizz-crypto-engine
+cd rizz-crypto-engine
+
+# 2. Create .env from template
+cp .env.example .env
+# Fill in DASHBOARD_SECRET at minimum
+
+# 3. Install dependencies
+pip install flask requests python-dotenv
+
+# 4. Run
+python engine.py
+
+# 5. Open dashboard
+# http://localhost:5000?secret=YOUR_DASHBOARD_SECRET
+```
+
+Everything runs in simulation — no real trades, no keys needed yet.
 
 ---
 
-## 2. Railway Setup
+## Phase 2 — Run Locally (Live Trading)
 
-1. New Project → Deploy from GitHub → select your repo
-2. Railway auto-detects the `Procfile` and runs `python engine.py`
-3. Go to **Variables** tab and add:
+1. Set `SIMULATION_MODE=false` in `.env`
+2. Add your exchange API keys to `.env`
+3. Add your wallet addresses and private keys to `.env`
+4. Uncomment dependencies in `requirements.txt` and install:
+   ```bash
+   pip install ccxt web3 python-dotenv flask requests
+   ```
+5. Wire in Infura (or Alchemy) key for ETH RPC in `.env`:
+   ```
+   ETH_RPC_URL=https://mainnet.infura.io/v3/YOUR_KEY
+   ```
+6. Run and test with small amounts first
 
-| Variable | Value |
+---
+
+## Phase 3 — Deploy to Railway
+
+1. Push all files to GitHub (**never commit `.env`**)
+2. Railway → New Project → Deploy from GitHub → select repo
+3. Go to **Variables** tab and add all values from your `.env`:
+
+| Variable | Notes |
 |---|---|
-| `SIMULATION_MODE` | `true` (change to `false` when going live) |
-| `DASHBOARD_SECRET` | any strong password |
-| `TELEGRAM_BOT_TOKEN` | from BotFather (see below) |
-| `TELEGRAM_CHAT_ID` | your Telegram user ID |
-| `API_KEY` | exchange API key |
-| `API_SECRET` | exchange API secret |
-| `LOOP_INTERVAL` | `60` (seconds between loops) |
-| `LARGE_MOVE_USD` | `100` |
-| `PORT` | `5000` |
+| `SIMULATION_MODE` | `false` for live |
+| `DASHBOARD_SECRET` | strong password |
+| `TELEGRAM_BOT_TOKEN` | from @BotFather |
+| `TELEGRAM_CHAT_ID` | from @userinfobot |
+| `COINBASE_API_KEY` | etc. |
+| `COINBASE_API_SECRET` | |
+| `COINBASE_PASSPHRASE` | |
+| `KRAKEN_API_KEY` | |
+| `KRAKEN_API_SECRET` | |
+| `BINANCE_API_KEY` | |
+| `BINANCE_API_SECRET` | |
+| `UPHOLD_API_KEY` | |
+| `UPHOLD_API_SECRET` | |
+| `BITRUE_API_KEY` | |
+| `BITRUE_API_SECRET` | |
+| `PHANTOM_SOL_ADDRESS` | |
+| `PHANTOM_SOL_PRIVATE_KEY` | |
+| `METAMASK_ETH_ADDRESS` | |
+| `METAMASK_ETH_PRIVATE_KEY` | |
+| `BIFROST_SGB_ADDRESS` | |
+| `BIFROST_SGB_PRIVATE_KEY` | |
+| `BIFROST_FLR_ADDRESS` | |
+| `BIFROST_FLR_PRIVATE_KEY` | |
+| `KEPLR_ATOM_ADDRESS` | |
+| `KEPLR_ATOM_PRIVATE_KEY` | |
+| `XDC_ADDRESS` | |
+| `XDC_PRIVATE_KEY` | |
+| `LEDGER_ETH_ADDRESS` | public only |
+| `LEDGER_BTC_ADDRESS` | public only |
+| `ETH_RPC_URL` | Infura/Alchemy endpoint |
 
-4. Deploy. Railway gives you a public URL like `https://rizz-engine.up.railway.app`
+4. Deploy. Railway gives you a public URL.
+5. Bookmark: `https://YOUR-URL.railway.app?secret=YOUR_SECRET`
 
 ---
 
-## 3. Dashboard Access
+## Telegram Setup
 
-Open: `https://your-railway-url.app/?secret=YOUR_DASHBOARD_SECRET`
+1. Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token
+2. Message [@userinfobot](https://t.me/userinfobot) → copy your chat ID
+3. Start your bot once (`/start`)
 
-Bookmark that URL. Open it on your phone or laptop to see live status and handle approvals.
+**Commands:**
+- `/approve <id>` — approve a pending action
+- `/deny <id>`    — deny a pending action
+- `/status`       — get portfolio summary
+- `/pause`        — pause the engine
+- `/resume`       — resume the engine
 
 ---
 
-## 4. Telegram Bot Setup
+## Reward Routing
 
-1. Message [@BotFather](https://t.me/BotFather) on Telegram
-2. Send `/newbot` — follow prompts — copy the **bot token**
-3. Get your chat ID: message [@userinfobot](https://t.me/userinfobot)
-4. Add both to Railway variables above
-5. Start your bot by messaging it once (`/start`)
+Edit `REWARD_ROUTING` in `config.py` to control where each asset's rewards go:
 
-When the engine needs approval, it will message you with:
+```python
+REWARD_ROUTING = {
+    "SGB":  "exchange",  # Bifrost SGB rewards → Coinbase
+    "FLR":  "exchange",  # Bifrost FLR rewards → Coinbase
+    "ATOM": "ledger",    # Keplr ATOM rewards → Ledger
+    "ETH":  "ledger",    # ETH staking → Ledger
+    ...
+}
 ```
-/approve abc12345
-/deny abc12345
-```
-Reply with one of those commands to resolve it.
 
 ---
 
-## 5. Going Live (when ready)
+## Going Live Checklist
 
-1. Set `SIMULATION_MODE=false` in Railway variables
-2. Uncomment `ccxt` in `requirements.txt`
-3. Wire in the 3 `# TODO` stubs in `engine.py`:
-   - `get_price()` — use `ccxt` exchange ticker
-   - `get_balance()` — use `ccxt` fetch_balance
-   - `execute_trade()` — use `ccxt` create_order
-4. Redeploy
-
----
-
-## Safety Rules (built-in)
-
-- Engine auto-pauses on high gas, volatility, exchange errors
-- Vault assets can never decrease automatically — always requires approval
-- All moves above `LARGE_MOVE_USD` require approval
-- Approvals time out after `APPROVAL_TIMEOUT` seconds (default 5 min) and are denied
+- [ ] Tested simulation mode locally — no errors
+- [ ] All exchange API keys added and tested
+- [ ] All wallet addresses pasted in
+- [ ] Telegram bot set up and responding
+- [ ] Dashboard accessible at Railway URL
+- [ ] Approval flow tested (trigger one + approve from phone)
+- [ ] `SIMULATION_MODE=false` set in Railway variables
+- [ ] Started with small swing stack amounts to verify trades execute

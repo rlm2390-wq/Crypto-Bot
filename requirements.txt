@@ -1,4 +1,24 @@
+# ── Web framework + HTTP ──
 flask>=3.0.0
 requests>=2.31.0
+
+# ── Environment variables ──
+python-dotenv>=1.0.0
+
+# ── Exchange API (ccxt covers Coinbase, Kraken, Binance, Uphold, Bitrue) ──
 # Uncomment when going live:
 # ccxt>=4.0.0
+
+# ── EVM wallets (MetaMask, Bifrost SGB/FLR, XDC) ──
+# Uncomment when going live:
+# web3>=6.0.0
+
+# ── Solana wallet (Phantom) ──
+# Uncomment when going live:
+# solana>=0.30.0
+# solders>=0.18.0
+# base58>=2.1.0
+
+# ── Cosmos wallet (Keplr / ATOM) ──
+# Uncomment when going live:
+# cosmpy>=0.9.0
